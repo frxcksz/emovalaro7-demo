@@ -34,20 +34,27 @@
         }
 
         .label {
+            display: flex;
+            flex-direction: column;
+            justify-content: center;
+            align-items: center;
             font-size: 12px;
-            padding: 2px 4px;
+            padding: 4px 6px;
             background-color: rgba(0, 0, 0, 0.6);
             color: white;
             border-radius: 3px;
             position: absolute;
-            top: -20px;
-            left: 0;
+            top: -55px;
+            left: 50%;
+            transform: translateX(-50%);
+            text-align: center;
+            white-space: nowrap;
         }
     </style>
 </head>
 <body>
     <div id="container">
-        <h1>Emotion and Engagement Detection</h1>
+        <h3>Emotion and Engagement Detection</h3>
         <div id="video-container" style="position: relative;">
             <video id="video" autoplay></video>
             <canvas id="canvas" style="display:none;"></canvas>
@@ -127,7 +134,19 @@
 
                 const label = document.createElement('div');
                 label.classList.add('label');
-                label.textContent = `Emotion: ${emotion} (${emotionPerc}%)\nValence: ${valence}\nArousal: ${arousal}`;
+
+                const emotionDiv = document.createElement('div');
+                emotionDiv.textContent = `Emotion: ${emotion} (${emotionPerc}%)`;
+
+                const valenceDiv = document.createElement('div');
+                valenceDiv.textContent = `Valence: ${valence}`;
+
+                const arousalDiv = document.createElement('div');
+                arousalDiv.textContent = `Arousal: ${arousal}`;
+
+                label.appendChild(emotionDiv);
+                label.appendChild(valenceDiv);
+                label.appendChild(arousalDiv);
                 boundingBox.appendChild(label);
 
                 videoContainer.appendChild(boundingBox);
