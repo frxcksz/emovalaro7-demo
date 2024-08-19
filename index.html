@@ -1,0 +1,160 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Emotion and Engagement Detection</title>
+    <style>
+        body {
+            display: flex;
+            justify-content: center;
+            align-items: center;
+            height: 100vh;
+            margin: 0;
+            background-color: #f0f0f0;
+            font-family: Arial, sans-serif;
+        }
+
+        #container {
+            text-align: center;
+        }
+
+        #video {
+            width: 100%;
+            height: 100%;
+            border: 1px solid black;
+            margin-bottom: 20px;
+            position: relative;
+            transform: scaleX(-1);
+        }
+
+        .bounding-box {
+            position: absolute;
+            border: 2px solid;
+        }
+
+        .label {
+            font-size: 12px;
+            padding: 2px 4px;
+            background-color: rgba(0, 0, 0, 0.6);
+            color: white;
+            border-radius: 3px;
+            position: absolute;
+            top: -20px;
+            left: 0;
+        }
+    </style>
+</head>
+<body>
+    <div id="container">
+        <h1>Emotion and Engagement Detection</h1>
+        <div id="video-container" style="position: relative;">
+            <video id="video" autoplay></video>
+            <canvas id="canvas" style="display:none;"></canvas>
+        </div>
+    </div>
+    <script>
+        const apiUrl = "https://emovalaro7-service-7qkc4rj5aa-et.a.run.app/predict";
+        let lastPrediction = null;
+        let startTime = Date.now();
+
+        function getColor(emotionLabel) {
+            const positiveEmotions = ["Happiness", "Surprise"];
+            const negativeEmotions = ["Anger", "Disgust"];
+            const fear = ["Fear"];
+            const sad = ["Sadness"];
+            if (negativeEmotions.includes(emotionLabel)) {
+                return 'red';  // Red color for negative emotions
+            } else if (positiveEmotions.includes(emotionLabel)) {
+                return 'green';  // Green color for positive emotions
+            } else if (sad.includes(emotionLabel)) {
+                return 'purple';  // Purple color for sad emotion
+            } else if (fear.includes(emotionLabel)) {
+                return 'yellow';  // Yellow color for fear emotion
+            } else {
+                return 'blue';  // Blue color for neutral emotion
+            }
+        }
+
+        async function sendFrameForPrediction(imageData) {
+            const response = await fetch(apiUrl, {
+                method: "POST",
+                headers: {
+                    "Content-Type": "application/json"
+                },
+                body: JSON.stringify({ image: imageData })
+            });
+            if (response.ok) {
+                lastPrediction = await response.json();
+            }
+        }
+
+        function captureAndPredict() {
+            const video = document.getElementById("video");
+            const canvas = document.getElementById("canvas");
+            const context = canvas.getContext("2d");
+
+            canvas.width = video.videoWidth;
+            canvas.height = video.videoHeight;
+            context.drawImage(video, 0, 0, canvas.width, canvas.height);
+            const imageData = canvas.toDataURL("image/jpeg").split(",")[1];
+
+            sendFrameForPrediction(imageData);
+        }
+
+        function updateUI() {
+            const videoContainer = document.getElementById("video-container");
+            const video = document.getElementById("video");
+
+            // Clear previous bounding boxes
+            videoContainer.querySelectorAll('.bounding-box').forEach(box => box.remove());
+
+            if (lastPrediction && lastPrediction.face_box) {
+                const faceBox = lastPrediction.face_box;
+                const emotion = lastPrediction.emotion;
+                const emotionPerc = (lastPrediction.emotion_perc * 100).toFixed(2);
+                const valence = lastPrediction.valence.toFixed(2);
+                const arousal = lastPrediction.arousal.toFixed(2);
+                const color = getColor(emotion);
+
+                const boundingBox = document.createElement('div');
+                boundingBox.classList.add('bounding-box');
+                boundingBox.style.left = `${canvas.width - faceBox.x - faceBox.width}px`;
+                boundingBox.style.top = `${faceBox.y}px`;
+                boundingBox.style.width = `${faceBox.width}px`;
+                boundingBox.style.height = `${faceBox.height}px`;
+                boundingBox.style.borderColor = color;
+
+                const label = document.createElement('div');
+                label.classList.add('label');
+                label.textContent = `Emotion: ${emotion} (${emotionPerc}%)\nValence: ${valence}\nArousal: ${arousal}`;
+                boundingBox.appendChild(label);
+
+                videoContainer.appendChild(boundingBox);
+            }
+
+            const elapsedTime = Date.now() - startTime;
+            if (elapsedTime >= 1000) {
+                startTime = Date.now();
+                captureAndPredict();
+            }
+
+            requestAnimationFrame(updateUI);
+        }
+
+        async function startVideoStream() {
+            const video = document.getElementById("video");
+            try {
+                const stream = await navigator.mediaDevices.getUserMedia({ video: true });
+                video.srcObject = stream;
+                video.play();
+                updateUI();
+            } catch (err) {
+                console.error("Error: Could not start video stream", err);
+            }
+        }
+
+        window.onload = startVideoStream;
+    </script>
+</body>
+</html>
